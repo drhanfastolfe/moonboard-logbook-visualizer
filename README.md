@@ -18,6 +18,8 @@ A Python application for tracking and visualizing Moonboard climbing progress. T
 │   └── config.py
 ├── db
 │   └── db_query.py
+├── docs
+│   └── db_schema.md ([DB Schema](docs/db_schema.md))
 ├── utils
 │   └── renew_cookie.py
 ├── logging_config.py
