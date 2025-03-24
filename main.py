@@ -69,6 +69,7 @@ def process_new_sessions(api, logbook):
 
 def main():
     global USER_ID, COOKIE
+    # Check if USER_ID is missing
     if not USER_ID:
         logger.info("USER_ID is missing. Trying to retrieve it with current cookie...")
         try:
@@ -80,7 +81,24 @@ def main():
             new_id = MoonboardAPI("", COOKIE).get_user_id()
         update_user_id_and_config(new_id, COOKIE)
     
+    # Check if COOKIE is missing
+    if not COOKIE:
+        logger.info("COOKIE is missing. Renewing cookie...")
+        COOKIE = get_renewed_cookie(USERNAME, PASSWORD)
+        update_user_id_and_config(USER_ID, COOKIE)
+    
+    # COOKIE validation
     api = MoonboardAPI(USER_ID, COOKIE)
+    try:
+        api.get_logbook()
+    except Exception as e:
+        if "Expired cookie" in str(e) or "invalid JSON" in str(e):
+            logger.info("Cookie expired or invalid response. Renewing token...")
+            COOKIE = get_renewed_cookie(USERNAME, PASSWORD)
+            update_user_id_and_config(USER_ID, COOKIE)
+            api = MoonboardAPI(USER_ID, COOKIE)
+        else:
+            raise
     logbook = process_logbook(api)
     if logbook:
         process_new_sessions(api, logbook)

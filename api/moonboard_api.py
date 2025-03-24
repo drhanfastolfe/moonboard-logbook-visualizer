@@ -7,22 +7,21 @@ class MoonboardAPI:
         self.cookie = cookie
         self.base_url = "https://www.moonboard.com"
         self.headers = {
-            'Accept': '*/*',
-            'Accept-Language': 'es,en-US;q=0.9,en;q=0.8',
-            'Connection': 'keep-alive',
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'Origin': self.base_url,
-            'Referer': f'{self.base_url}/Account/Profile/{user_id}',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-origin',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-            'X-Requested-With': 'XMLHttpRequest',
-            'sec-ch-ua': '"Chromium";v="134", "Not:A-Brand";v="24", "Google Chrome";v="134"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
             'Cookie': cookie
         }
+
+    def _process_response(self, response):
+        # Process the response by raising HTTP errors and decoding JSON.
+        try:
+            response.raise_for_status()
+            return response.json()
+        except requests.HTTPError as http_err:
+            logger.error("HTTP error occurred: %s", http_err)
+            raise
+        except ValueError as json_err:
+            logger.error("JSON decode error: %s", json_err)
+            raise Exception("Expired cookie or invalid JSON response.") from json_err
 
     def get_logbook(self):
         logger.info("Requesting logbook data...")
@@ -30,11 +29,7 @@ class MoonboardAPI:
         payload = "sort=&page=1&pageSize=40&group=&filter=setupId~eq~'17'~and~Configuration~eq~2"
         response = requests.post(url, headers=self.headers, data=payload)
         logger.info("Logbook data retrieved. Status: %s", response.status_code)
-        try:
-            return response.json()
-        except ValueError:
-            logger.error("JSON decode error in get_logbook.")
-            raise Exception("Expired cookie or invalid JSON response.")
+        return self._process_response(response)
 
     def get_entries(self, session_id):
         logger.info("Requesting entries for session %s", session_id)
@@ -42,11 +37,7 @@ class MoonboardAPI:
         payload = "sort=&page=1&pageSize=30&group=&filter=setupId~eq~'17'~and~Configuration~eq~2"
         response = requests.post(url, headers=self.headers, data=payload)
         logger.info("Entries for session %s retrieved. Status: %s", session_id, response.status_code)
-        try:
-            return response.json()
-        except ValueError:
-            logger.error("JSON decode error in get_entries.")
-            raise Exception("Expired cookie or invalid JSON response.")
+        return self._process_response(response)
 
     def get_user_id(self):
         logger.info("Extracting user id from benchmarks...")
@@ -64,8 +55,4 @@ class MoonboardAPI:
         payload = "sort=&page=1&pageSize=40&group=&aggregate=Score-sum~MaxScore-sum&filter="
         response = requests.post(url, headers=self.headers, data=payload)
         logger.info("Benchmarks retrieved. Status: %s", response.status_code)
-        try:
-            return response.json()
-        except ValueError:
-            logger.error("JSON decode error in get_benckmarks.")
-            raise Exception("Expired cookie or invalid JSON response.")
+        return self._process_response(response)
