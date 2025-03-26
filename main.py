@@ -1,107 +1,105 @@
 import os
-from tinydb import TinyDB
-from db.db_query import DBQuery
-from api.moonboard_api import MoonboardAPI
-from config.config import load_config, update_config
-from utils.renew_cookie import get_renewed_cookie
-from logging_config import setup_logging
+import json
+from getpass import getpass
+from client.moonboard_client import MoonboardClient
+from utils.auth import get_auth_credentials
+from utils.moonboard_setup import MOONBOARD_SETUPS
+from utils.logger_config import setup_logger
 
 
-logger = setup_logging()
+logger = setup_logger(__name__)
 
-# Load configuration from env.ini (which now uses an [env] section)
-config = load_config()
-env = config["env"]
-USER_ID = env.get("USER_ID", "").strip()
-COOKIE = env.get("COOKIE", "").strip()
-USERNAME = env.get("USERNAME", "").strip()
-PASSWORD = env.get("PASSWORD", "").strip()
-DB_PATH = os.path.join("logbook", "db.json")
+# Create base directory for storing logbooks
+if not os.path.exists("logbooks"):
+    os.makedirs("logbooks")
 
-# Ensure the logbook directory exists.
-if not os.path.exists("logbook"):
-    os.makedirs("logbook")
+def save_logbook(logbook_data, setup_name):
+    # Creates directories and saves main logbook JSON containing all sessions
+    if not os.path.exists(f"logbooks/logbook_{setup_name}"):
+        os.makedirs(f"logbooks/logbook_{setup_name}")
+        os.makedirs(f"logbooks/logbook_{setup_name}/sessions_{setup_name}")
+    filename = f"logbooks/logbook_{setup_name}/logbook_{setup_name}.json"
+    with open(filename, 'w') as f:
+        json.dump(logbook_data, f, indent=2)
+    logger.info(f"Saved logbook data for {setup_name} to {filename}")
 
-# Initialize TinyDB and the database query object.
-db = TinyDB(DB_PATH)
-db_query = DBQuery(db)
+def save_session_entries(entries_data, session_id, setup_name):
+    # Saves individual session data
+    filename = f"logbooks/logbook_{setup_name}/sessions_{setup_name}/session_{session_id}.json"
+    with open(filename, 'w') as f:
+        json.dump(entries_data, f, indent=2)
+    logger.info(f"Saved session entries for {setup_name} to {filename}")
 
-def update_user_id_and_config(new_id, new_cookie):
-    global USER_ID, COOKIE
-    USER_ID = new_id
-    COOKIE = new_cookie
-    update_config(USERNAME=USERNAME, PASSWORD=PASSWORD, COOKIE=COOKIE, USER_ID=USER_ID)
-    logger.info("Updated USER_ID and COOKIE in config.")
+def load_existing_logbook(setup_name):
+    # Loads previously saved logbook file or returns None if not found
+    filename = f"logbooks/logbook_{setup_name}/logbook_{setup_name}.json"
+    try:
+        with open(filename, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
 
-def process_logbook(api):
-    """
-    Retrieves the latest logbook data from the API and updates the database 
-    if new data is found.
-    """
-    logbook = api.get_logbook()
-    current_logbooks = db.table("logbook").all()
-    if current_logbooks:
-        stored_total = current_logbooks[0].get("Total", 0)
-        new_total = logbook.get("Total", 0)
-        if new_total <= stored_total:
-            logger.info("No new data found in logbook. Skipping update.")
-            return None
-    db_query.update_logbook(logbook)
-    logger.info("Logbook updated in database.")
-    return logbook
+def get_existing_session_ids(existing_logbook):
+    # Get list of existing session IDs from the logbook data
+    if not existing_logbook or "Data" not in existing_logbook:
+        return set()
+    return {session.get("Id") for session in existing_logbook["Data"] if session.get("Id")}
 
-def process_new_sessions(api, logbook):
-    """
-    Processes new sessions found in the logbook by fetching their entries
-    and updating the sessions table.
-    """
-    existing_session_ids = db_query.get_existing_session_ids()
-    new_sessions = [session for session in logbook.get("Data", []) if session["Id"] not in existing_session_ids]
-    if not new_sessions:
-        logger.info("No new sessions found. Skipping session updates.")
-        return
-    for session in new_sessions:
-        session_id = session["Id"]
-        logger.info("Fetching entries for session %s...", session_id)
-        entries = api.get_entries(session_id)
-        db_query.upsert_session(session_id, entries)
-        logger.info("Session %s stored in database.", session_id)
+def process_logbook(client, setup_id, configuration, setup_name):
+    # Downloads and saves logbook data, only saving new sessions
+    try:
+        new_logbook = client.get_logbook(setup_id, configuration)
+        
+        # Check if user has any sessions
+        if new_logbook.get("Total", 0) > 0:
+            # Compare with existing data to check for updates
+            existing_logbook = load_existing_logbook(setup_name)
+            existing_total = existing_logbook.get("Total", 0) if existing_logbook else 0
+            
+            if new_logbook["Total"] > existing_total:
+                save_logbook(new_logbook, setup_name)
+                # Get existing session IDs from the logbook
+                existing_sessions = get_existing_session_ids(existing_logbook)
+                
+                # Download only new sessions
+                new_sessions = 0
+                for session in new_logbook.get("Data", []):
+                    session_id = session.get("Id")
+                    if session_id and session_id not in existing_sessions:
+                        entries = client.get_entries(session_id, setup_id, configuration)
+                        save_session_entries(entries, session_id, setup_name)
+                        new_sessions += 1
+                
+                logger.info(f"Downloaded {new_sessions} new sessions for {setup_name}")
+            else:
+                logger.info(f"No new sessions found for {setup_name}")
+        else:
+            logger.warning(f"No logbook sessions for {setup_name}.")
+        
+        return new_logbook
+    except Exception as e:
+        logger.error(f"Error processing logbook for {setup_name}: {str(e)}")
+        return None
 
 def main():
-    global USER_ID, COOKIE
-    # Check if USER_ID is missing
-    if not USER_ID:
-        logger.info("USER_ID is missing. Trying to retrieve it with current cookie...")
-        try:
-            temp_api = MoonboardAPI(USER_ID, COOKIE)
-            new_id = temp_api.get_user_id()
-        except Exception as e:
-            logger.warning("Failed to get USER_ID using existing cookie, renewing cookie...")
-            COOKIE = get_renewed_cookie(USERNAME, PASSWORD)
-            new_id = MoonboardAPI("", COOKIE).get_user_id()
-        update_user_id_and_config(new_id, COOKIE)
+    # Get username and password safely
+    username = input("Enter your Moonboard username: ")
+    password = getpass("Enter your Moonboard password: ")
     
-    # Check if COOKIE is missing
-    if not COOKIE:
-        logger.info("COOKIE is missing. Renewing cookie...")
-        COOKIE = get_renewed_cookie(USERNAME, PASSWORD)
-        update_user_id_and_config(USER_ID, COOKIE)
-    
-    # COOKIE validation
-    api = MoonboardAPI(USER_ID, COOKIE)
     try:
-        api.get_logbook()
+        # Get authentication credentials
+        auth_creds = get_auth_credentials(username, password)
+        client = MoonboardClient(username, auth_creds['cookie'], auth_creds['token'])
+        
+        # Process logbook for each Moonboard setup
+        for setup in MOONBOARD_SETUPS:
+            logger.info(f"Processing {setup.setup_name}")
+            process_logbook(client, setup.setup_id, setup.configuration, setup.setup_name)
+            
     except Exception as e:
-        if "Expired cookie" in str(e) or "invalid JSON" in str(e):
-            logger.info("Cookie expired or invalid response. Renewing token...")
-            COOKIE = get_renewed_cookie(USERNAME, PASSWORD)
-            update_user_id_and_config(USER_ID, COOKIE)
-            api = MoonboardAPI(USER_ID, COOKIE)
-        else:
-            raise
-    logbook = process_logbook(api)
-    if logbook:
-        process_new_sessions(api, logbook)
+        logger.error(f"An error occurred: {str(e)}")
+        raise
 
+# Script entry point
 if __name__ == "__main__":
     main()

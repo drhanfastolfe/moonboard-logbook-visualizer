@@ -1,69 +1,93 @@
 # Moonboard Logbook Visualizer
 
-A Python application for tracking and visualizing Moonboard climbing progress. This tool syncs session data with a TinyDB database and will include desktop data visualization in future versions.
+A tool to download and visualize your Moonboard climbing data to track your progress and analyze your performance.
 
-## Features
-- Fetches logbook data from the Moonboard API
-- Tracks climbing sessions and their details
-- Automatic cookie renewal using Playwright
-- Ensures database consistency with TinyDB
-- Provides configurable environment variables
-- **Future Feature:** Desktop data visualization with Python
+## Overview
 
-## Project Structure
-```
-├── api
-│   └── moonboard_api.py
-├── config
-│   └── config.py
-├── db
-│   └── db_query.py
-├── docs
-│   └── db_schema.md ([DB Schema](docs/db_schema.md))
-├── utils
-│   └── renew_cookie.py
-├── logging_config.py
-├── main.py
-├── env.ini
-├── db.json
-├── .gitignore
-└── README.md
+This tool allows you to:
+- Download your complete Moonboard climbing history across all Moonboard setups (2016, 2017, 2019, 2020, 2024)
+- Store the data locally in JSON format for analysis
+- [Coming Soon] Visualize your climbing progress through graphs and statistics
+
+## Installation
+
+1. Clone this repository:
+```bash
+git clone https://github.com/yourusername/moonboard-logbook-visualizer.git
+cd moonboard-logbook-visualizer
 ```
 
-## Setup Instructions
-1. **Install dependencies:**
+2. Install required dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. **Set environment variables:**
-- Create an `env.ini` file in the root directory following the template:
+3. Install browser requirements for Playwright:
+```bash
+playwright install
 ```
-[env]
-USERNAME=your_username
-PASSWORD=your_password
-COOKIE=your_cookie_data
-USER_ID=your_user_id
-```
-(Note: You can get the `COOKIE` and `USER_ID` by logging in to the website and inspecting the network requests. If left empty; the script will automatically fetch them.)
 
-3. **Run the Application:**
+## Usage
+
+1. Run the data collection script:
 ```bash
 python main.py
 ```
 
-## Dependencies
-- `requests`
-- `tinydb`
-- `playwright`
-- `configparser`
+2. Enter your Moonboard username and password when prompted. The script will:
+   - Authenticate with the Moonboard website
+   - Download your climbing history for all Moonboard setups
+   - Store the data in the `logbooks` directory
 
-## Future Improvements
-- Desktop data visualization for Moonboard climbing insights
-- Improved filtering and sorting for your climbing data
+The data is organized as follows:
+```
+logbooks/
+├── logbook_2016-25/
+├── logbook_2016-40/
+├── logbook_2017-25/
+├── logbook_2017-40/
+├── logbook_2019-25/
+├── logbook_2019-40/
+├── logbook_2020-40/
+├── logbook_2024-25/
+└── logbook_2024-40/
+```
+
+## Data Schema
+
+The downloaded data includes:
+- Complete session history
+- Detailed problem information
+- Grades and attempts
+- User ratings and comments
+- Hold configurations
+
+For a detailed description of the data schema, see [docs/schema.md](docs/schema.md).
+
+## Coming Soon
+
+Future features planned:
+- Grade progression visualization
+- Session frequency analysis
+- Success rate tracking
+- Hold type usage analysis
+- Grade pyramid visualization
+- Send attempts distribution
+- Training load tracking
+
+## Privacy & Security
+
+- Your Moonboard credentials are never stored
+- All data is stored locally on your machine
+- No data is shared with third parties
 
 ## Contributing
-Feel free to fork this repository, submit issues, or suggest improvements. PRs are welcome!
+
+Contributions are welcome! Feel free to:
+- Open issues for bugs or feature requests
+- Submit pull requests with improvements
+- Share ideas for visualizations and analysis
 
 ## License
-This project is licensed under the MIT License.
+
+This project is licensed under the MIT License - see the LICENSE file for details.

@@ -17,6 +17,7 @@ env.ini
 .idea/
 .vscode/
 *.iml
+.cursor/*
 
 # OS generated files
 .DS_Store
@@ -25,7 +26,11 @@ Thumbs.db
 # Logs and databases
 *.log
 logbook/
+logbooks/
 db.json
 
 # Playwright sessions
 playwright/.cache/
+
+# Notes
+*.notes

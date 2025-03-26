@@ -1,4 +1,2 @@
 requests==2.31.0
 playwright==1.39.0
-tinydb==4.7.1
-configparser==6.0.0
