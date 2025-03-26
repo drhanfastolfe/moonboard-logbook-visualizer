@@ -82,7 +82,7 @@ def process_logbook(client, setup_id, configuration, setup_name):
         return None
 
 def main():
-    # Get username and password safely
+    # Get username and password safely. Note password will not appear in terminal
     username = input("Enter your Moonboard username: ")
     password = getpass("Enter your Moonboard password: ")
     
