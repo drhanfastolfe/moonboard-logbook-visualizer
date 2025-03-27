@@ -5,6 +5,7 @@ from client.moonboard_client import MoonboardClient
 from utils.auth import get_auth_credentials
 from utils.moonboard_setup import MOONBOARD_SETUPS
 from utils.logger_config import setup_logger
+from visualisations.hold_heatmap import collect_hold_data
 
 
 logger = setup_logger(__name__)
@@ -82,7 +83,7 @@ def process_logbook(client, setup_id, configuration, setup_name):
         return None
 
 def main():
-    # Get username and password safely
+    # Get username and password safely. Note password will not appear in terminal
     username = input("Enter your Moonboard username: ")
     password = getpass("Enter your Moonboard password: ")
     
@@ -95,6 +96,8 @@ def main():
         for setup in MOONBOARD_SETUPS:
             logger.info(f"Processing {setup.setup_name}")
             process_logbook(client, setup.setup_id, setup.configuration, setup.setup_name)
+        # Process hold data and generate heatmaps
+        collect_hold_data()
             
     except Exception as e:
         logger.error(f"An error occurred: {str(e)}")

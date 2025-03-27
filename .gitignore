@@ -34,3 +34,6 @@ playwright/.cache/
 
 # Notes
 *.notes
+
+# Notebooks
+*.ipynb 
