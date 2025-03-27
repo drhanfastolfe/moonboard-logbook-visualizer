@@ -7,6 +7,7 @@ A tool to download and visualize your Moonboard climbing data to track your prog
 This tool allows you to:
 - Download your complete Moonboard climbing history across all Moonboard setups (2016, 2017, 2019, 2020, 2024)
 - Store the data locally in JSON format for analysis
+- Generate heatmaps of hold use frequency on each setup
 - [Coming Soon] Visualize your climbing progress through graphs and statistics
 
 ## Installation
@@ -91,3 +92,4 @@ Contributions are welcome! Feel free to:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
