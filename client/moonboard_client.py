@@ -4,15 +4,16 @@ from utils.logger_config import setup_logger
 logger = setup_logger(__name__)
 
 class MoonboardClient:
-    def __init__(self, username, cookie, token):
+    def __init__(self, username, nickname, cookie, token):
         self.cookie = cookie
         self.token = token
         self.base_url = "https://www.moonboard.com"
         self.headers = {
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'Cookie': cookie
+            'Cookie': cookie,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
         }
-        self.user_id = self._get_user_id(username)
+        self.user_id = self._get_user_id(nickname)
 
     def _process_response(self, response):
         try:
@@ -42,7 +43,7 @@ class MoonboardClient:
         return self._process_response(response)
 
     def get_user_profiles(self, username):
-        logger.info("Requesting user profiles for username: %s", username)
+        logger.info("Requesting user profiles for setter name: %s", username)
         url = f"{self.base_url}/Account/GetUserProfiles"
         payload = f"sort=&page=1&pageSize=8041&group=&filter=Query~eq~'{username}'&__RequestVerificationToken={self.token}"
         response = requests.post(url, headers=self.headers, data=payload)
@@ -50,7 +51,7 @@ class MoonboardClient:
         return self._process_response(response)
     
     def _get_user_id(self, username):
-        logger.info("Getting user ID for username: %s", username)
+        logger.info("Getting user ID for setter name: %s", username)
         response = self.get_user_profiles(username)
         data = response.get("Data", [])
         if data and isinstance(data, list) and len(data) > 0:
@@ -58,4 +59,4 @@ class MoonboardClient:
             if user_id:
                 logger.info("Found user ID: %s", user_id)
                 return user_id
-        raise Exception(f"User ID not found for username: {username}") 
+        raise Exception(f"User ID not found for setter name: {username}") 
