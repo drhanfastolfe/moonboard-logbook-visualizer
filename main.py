@@ -85,11 +85,12 @@ def main():
     # Get username and password safely
     username = input("Enter your Moonboard username: ")
     password = getpass("Enter your Moonboard password: ")
+    nickname = input("Enter your Moonboard setter name: ") #in Monnboard app it is called setter name, however in API it is called nickname
     
     try:
         # Get authentication credentials
         auth_creds = get_auth_credentials(username, password)
-        client = MoonboardClient(username, auth_creds['cookie'], auth_creds['token'])
+        client = MoonboardClient(username, nickname, auth_creds['cookie'], auth_creds['token'])
         
         # Process logbook for each Moonboard setup
         for setup in MOONBOARD_SETUPS:
