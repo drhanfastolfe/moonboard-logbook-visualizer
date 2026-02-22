@@ -34,7 +34,8 @@ playwright install
 python main.py
 ```
 
-2. Enter your Moonboard username and password when prompted. The script will:
+2. Enter your Moonboard username, password and setter name when prompted. You can find your setter name in MB App (edit profile).
+   The script will:
    - Authenticate with the Moonboard website
    - Download your climbing history for all Moonboard setups
    - Store the data in the `logbooks` directory
